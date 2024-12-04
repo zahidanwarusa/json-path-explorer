@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON Path Explorer Pro</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="icon-badge">
+                <i class="fas fa-code"></i>
+            </div>
+            <h1>JSON Path Explorer Pro</h1>
+            <p>Transform and analyze JSON with precision</p>
+        </header>
+
+        <main class="card">
+            <div class="tab-container">
+                <button class="tab active" data-mode="json-to-path">
+                    <i class="fas fa-arrow-right"></i>
+                    JSON → Paths
+                </button>
+                <button class="tab" data-mode="path-to-json">
+                    <i class="fas fa-arrow-left"></i>
+                    Paths → JSON
+                </button>
+            </div>
+
+            <section id="json-to-path-section" class="mode-section">
+                <div class="input-section">
+                    <div class="input-group">
+                        <label class="input-label">
+                            <i class="fas fa-code"></i>
+                            Enter JSON:
+                        </label>
+                        <div class="input-wrapper">
+                            <textarea id="jsonInput" spellcheck="false" placeholder="Paste your JSON here..."></textarea>
+                            <button class="copy-btn" data-clipboard="jsonInput">
+                                <i class="fas fa-copy"></i>
+                                <span class="tooltip">Copy</span>
+                            </button>
+                        </div>
+                    </div>
+                    <button class="convert-btn" onclick="jsonToPaths()">
+                        <i class="fas fa-magic"></i>
+                        Transform to Paths
+                    </button>
+                </div>
+
+                <div class="result-section">
+                    <div class="input-group">
+                        <label class="input-label">
+                            <i class="fas fa-sitemap"></i>
+                            Paths:
+                        </label>
+                        <div class="input-wrapper">
+                            <textarea id="pathsResult" readonly></textarea>
+                            <button class="copy-btn" data-clipboard="pathsResult">
+                                <i class="fas fa-copy"></i>
+                                <span class="tooltip">Copy</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">
+                            <i class="fas fa-database"></i>
+                            Values:
+                        </label>
+                        <div class="input-wrapper">
+                            <textarea id="valuesResult" readonly></textarea>
+                            <button class="copy-btn" data-clipboard="valuesResult">
+                                <i class="fas fa-copy"></i>
+                                <span class="tooltip">Copy</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="path-to-json-section" class="mode-section" style="display: none;">
+                <div class="input-section">
+                    <div class="input-group">
+                        <label class="input-label">
+                            <i class="fas fa-sitemap"></i>
+                            Enter Paths:
+                        </label>
+                        <div class="input-wrapper">
+                            <textarea id="pathsInput" spellcheck="false" placeholder="Enter paths separated by commas..."></textarea>
+                            <button class="copy-btn" data-clipboard="pathsInput">
+                                <i class="fas fa-copy"></i>
+                                <span class="tooltip">Copy</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">
+                            <i class="fas fa-database"></i>
+                            Enter Values:
+                        </label>
+                        <div class="input-wrapper">
+                            <textarea id="valuesInput" spellcheck="false" placeholder="Enter values separated by commas..."></textarea>
+                            <button class="copy-btn" data-clipboard="valuesInput">
+                                <i class="fas fa-copy"></i>
+                                <span class="tooltip">Copy</span>
+                            </button>
+                        </div>
+                    </div>
+                    <button class="convert-btn" onclick="pathsToJson()">
+                        <i class="fas fa-magic"></i>
+                        Generate JSON
+                    </button>
+                </div>
+
+                <div class="result-section">
+                    <div class="input-group">
+                        <label class="input-label">
+                            <i class="fas fa-code"></i>
+                            JSON Result:
+                        </label>
+                        <div class="input-wrapper">
+                            <textarea id="jsonResult" readonly></textarea>
+                            <button class="copy-btn" data-clipboard="jsonResult">
+                                <i class="fas fa-copy"></i>
+                                <span class="tooltip">Copy</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="notification" class="notification">
+        <i class="fas fa-check-circle"></i>
+        <span>Copied to clipboard!</span>
+    </div>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
