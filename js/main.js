@@ -1,4 +1,4 @@
-// DOM Elements and State
+// DOM Elements
 const elements = {
     tabs: document.querySelectorAll('.tab'),
     sections: document.querySelectorAll('.mode-section'),
@@ -37,7 +37,6 @@ function switchMode(mode) {
     elements.tabs.forEach(tab => {
         tab.classList.toggle('active', tab.dataset.mode === mode);
     });
-
     elements.sections.forEach(section => {
         section.style.display = section.id.includes(mode) ? 'block' : 'none';
     });
@@ -60,26 +59,66 @@ function showNotification(message, type = 'success') {
 
 // JSON Path Operations
 function findPaths(obj, parentPath = '') {
-    const result = {
-        paths: [],
-        values: []
-    };
+    const paths = [];
+    const values = [];
     
     function traverse(current, path) {
-        for (const [key, value] of Object.entries(current)) {
-            const currentPath = path ? `${path}.${key}` : key;
-            
-            if (value && typeof value === 'object' && !Array.isArray(value)) {
-                traverse(value, currentPath);
+        if (Array.isArray(current)) {
+            if (current.every(item => typeof item !== 'object' || item === null)) {
+                paths.push(path);
+                values.push(JSON.stringify(current));
             } else {
-                result.paths.push(currentPath);
-                result.values.push(String(value));
+                current.forEach((item, index) => {
+                    if (typeof item === 'object' && item !== null) {
+                        Object.entries(item).forEach(([key, value]) => {
+                            const currentPath = `${path}[${index}].${key}`;
+                            if (Array.isArray(value)) {
+                                paths.push(currentPath);
+                                values.push(JSON.stringify(value));
+                            } else {
+                                paths.push(currentPath);
+                                values.push(String(value));
+                            }
+                        });
+                    }
+                });
             }
+        } else {
+            Object.entries(current).forEach(([key, value]) => {
+                const currentPath = path ? `${path}.${key}` : key;
+                if (Array.isArray(value) && value.every(item => typeof item === 'object')) {
+                    value.forEach((item, index) => {
+                        if (typeof item === 'object' && item !== null) {
+                            Object.entries(item).forEach(([subKey, subValue]) => {
+                                const arrayPath = `${currentPath}[${index}].${subKey}`;
+                                if (Array.isArray(subValue)) {
+                                    paths.push(arrayPath);
+                                    values.push(JSON.stringify(subValue));
+                                } else {
+                                    paths.push(arrayPath);
+                                    values.push(String(subValue));
+                                }
+                            });
+                        }
+                    });
+                } else if (Array.isArray(value)) {
+                    paths.push(currentPath);
+                    values.push(JSON.stringify(value));
+                } else if (typeof value === 'object' && value !== null) {
+                    traverse(value, currentPath);
+                } else {
+                    paths.push(currentPath);
+                    values.push(String(value));
+                }
+            });
         }
     }
     
-    traverse(obj, parentPath);
-    return result;
+    traverse(obj, '');
+    return {
+        paths: paths.join(', '),
+        values: values.join(', ')
+    };
 }
 
 // Conversion Functions
@@ -91,10 +130,10 @@ function jsonToPaths() {
         const json = JSON.parse(jsonInput);
         const { paths, values } = findPaths(json);
         
-        if (paths.length === 0) throw new Error('No valid paths found in JSON');
+        if (!paths) throw new Error('No valid paths found in JSON');
         
-        elements.results.paths.value = paths.join(', ');
-        elements.results.values.value = values.join(', ');
+        elements.results.paths.value = paths;
+        elements.results.values.value = values;
         
         animateSuccess([elements.results.paths, elements.results.values]);
     } catch (error) {
@@ -104,8 +143,29 @@ function jsonToPaths() {
 
 function pathsToJson() {
     try {
-        const paths = elements.inputs.paths.value.split(',').map(p => p.trim());
-        const values = elements.inputs.values.value.split(',').map(v => v.trim());
+        // Split while preserving array brackets
+        const splitPathsAndValues = (str) => {
+            let result = [];
+            let current = '';
+            let inBrackets = 0;
+            
+            for (let char of str) {
+                if (char === '[') inBrackets++;
+                if (char === ']') inBrackets--;
+                
+                if (char === ',' && inBrackets === 0) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            if (current) result.push(current.trim());
+            return result;
+        };
+
+        const paths = splitPathsAndValues(elements.inputs.paths.value);
+        const values = splitPathsAndValues(elements.inputs.values.value);
         
         if (!paths.length || !values.length) {
             throw new Error('Please enter both paths and values');
@@ -116,17 +176,40 @@ function pathsToJson() {
         }
         
         const result = {};
+        
         paths.forEach((path, index) => {
             let current = result;
-            const parts = path.split('.');
-            const lastPart = parts.pop();
+            const segments = path.match(/[^\.\[\]]+|\[\d+\]/g) || [];
+            const lastSegment = segments.pop();
             
-            for (const part of parts) {
-                current[part] = current[part] || {};
-                current = current[part];
+            segments.forEach(segment => {
+                if (segment.startsWith('[')) {
+                    const arrayIndex = parseInt(segment.slice(1, -1));
+                    if (!Array.isArray(current)) {
+                        throw new Error(`Invalid array path at ${path}`);
+                    }
+                    current[arrayIndex] = current[arrayIndex] || {};
+                    current = current[arrayIndex];
+                } else {
+                    const nextIsArray = segments[segments.indexOf(segment) + 1]?.startsWith('[');
+                    current[segment] = current[segment] || (nextIsArray ? [] : {});
+                    current = current[segment];
+                }
+            });
+            
+            let finalValue = values[index].trim();
+            try {
+                finalValue = JSON.parse(finalValue);
+            } catch {
+                // Keep as string if not valid JSON
             }
             
-            current[lastPart] = parseValue(values[index]);
+            if (lastSegment.startsWith('[')) {
+                const arrayIndex = parseInt(lastSegment.slice(1, -1));
+                current[arrayIndex] = finalValue;
+            } else {
+                current[lastSegment] = finalValue;
+            }
         });
         
         elements.results.json.value = JSON.stringify(result, null, 2);
@@ -136,22 +219,11 @@ function pathsToJson() {
     }
 }
 
-// Helper Functions
-function parseValue(value) {
-    if (value.toLowerCase() === 'true') return true;
-    if (value.toLowerCase() === 'false') return false;
-    if (value === 'null') return null;
-    if (!isNaN(value) && value.trim() !== '') return Number(value);
-    return value;
-}
-
 function animateSuccess(elements) {
     elements.forEach(element => {
         element.style.transition = 'background-color 0.3s ease';
         element.style.backgroundColor = 'rgba(16, 185, 129, 0.1)';
-        setTimeout(() => {
-            element.style.backgroundColor = '';
-        }, 500);
+        setTimeout(() => element.style.backgroundColor = '', 500);
     });
 }
 
